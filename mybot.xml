@@ -1,0 +1,107 @@
+<aiml version="1.0.1" encoding="UTF-8">
+
+<!-- Greetings and Politeness -->
+<category> <pattern> HELLO </pattern>
+  <template>Hello! How are you?</template> </category>
+
+<category> <pattern> HELLO * </pattern>
+  <template><srai>HELLO</srai></template> </category>
+
+<category> <pattern> HI </pattern>
+  <template><srai>HELLO</srai></template> </category>
+
+<category> <pattern> HI * </pattern>
+  <template><srai>HELLO</srai></template> </category>
+
+<category> <pattern> HOW ARE YOU </pattern>
+  <template>I'm functioning within normal parameters, thanks for asking.</template></category>
+
+<category><pattern> I AM FINE </pattern>
+  <template>That's good to know. What would you like to discuss regarding flight booking?</template></category>
+
+<category><pattern> BYE </pattern>
+  <template>Bye! Nice talking to you. You take care now.</template></category>
+
+<category><pattern> GOODBYE </pattern>
+  <template><srai>BYE</srai></template></category>
+
+<category><pattern> EXIT </pattern>
+  <template><srai>BYE</srai></template></category>
+
+<category> <pattern> THANKS </pattern>
+  <template>You are welcome.</template></category>
+
+<category> <pattern> THANK YOU </pattern>
+  <template><srai>THANKS</srai></template></category>
+
+<category> <pattern> CHEERS </pattern>
+  <template>Sure mate.</template></category>
+
+<category> <pattern> CHEERS * </pattern>
+  <template>Sure mate.</template></category>
+
+<category> <pattern> HELP </pattern>
+  <template>I can get prices for flights, weather infomation, and look up infomation on the holiday destinations round the world</template></category>
+
+<category> <pattern> WHAT CAN YOU DO </pattern>
+  <template><srai>HELP</srai></template> </category>
+
+<!-- Untility-->
+<category> <pattern> SET * AS HOME </pattern>
+  <template>#0<star index="1"/>$ORIGIN</template> </category>
+
+<category> <pattern> SET * AS DESTINATION </pattern>
+  <template>#0<star index="1"/>$DESTINATION</template> </category>
+
+<category> <pattern> SET HOME AS * </pattern>
+  <template>#0<star index="1"/>$ORIGIN</template> </category>
+
+<category> <pattern> SET DESTINATION AS *</pattern>
+  <template>#0<star index="1"/>$DESTINATION</template> </category>
+
+<category> <pattern> SET * AS OUTBOUND </pattern>
+  <template>#0<star index="1"/>$OUTBOUND</template> </category>
+
+<category> <pattern> SET * AS INBOUND </pattern>
+  <template>#0<star index="1"/>$INBOUND</template> </category>
+
+<!-- FLIGHT API -->
+<category><pattern> FROM * TO * </pattern>
+  <template>#1<star index="1"/>$<star index="2"/></template></category>
+
+<category><pattern> FROM * TO * ON * </pattern>
+  <template>#1<star index="1"/>$<star index="2"/>$<star index="3"/></template></category> 
+
+<category><pattern> * FROM * TO * </pattern>
+  <template>#1<star index="2"/>$<star index="3"/></template></category>
+
+<category><pattern> * FROM * TO * ON * </pattern>
+  <template>#1<star index="2"/>$<star index="3"/>$<star index="4"/></template></category> 
+
+<!-- Weather API -->
+<category> <pattern> HOWS THE WEATHER </pattern>
+  <template>#9$HOWS THE WEATHER</template></category>
+
+<category><pattern> WHAT IS THE WEATHER LIKE IN *</pattern>
+  <template>#2<star index="1"/></template></category>
+
+<category><pattern> HOW IS THE WEATHER IN * </pattern>
+  <template><srai>WHAT IS THE WEATHER LIKE in <star/></srai></template></category>
+
+<category><pattern> HOWS THE WEATHER IN * </pattern>
+  <template><srai>WHAT IS THE WEATHER LIKE in <star/></srai></template></category>
+
+<!--- Wikipedia API -->
+<category><pattern> WHERE IS * </pattern>
+  <template>#3<star index="1"/></template></category>
+
+<!-- CNN -->
+<category><pattern> WHAT IS *</pattern>
+  <template>#4<star index="1"/></template></category>
+
+
+<!-- Default reaction -->
+<category><pattern> * </pattern>
+  <template>#9$<star index="1"/></template></category>
+
+</aiml>
