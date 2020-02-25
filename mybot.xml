@@ -99,6 +99,9 @@
 <category><pattern> WHAT IS *</pattern>
   <template>#4<star index="1"/></template></category>
 
+<!-- FOL model interface -->
+<category> <pattern> WHO IS IN * </pattern>
+<template>#5<star index="1"/></template></category>
 
 <!-- Default reaction -->
 <category><pattern> * </pattern>
