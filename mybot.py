@@ -21,13 +21,17 @@ angel => ""
 gemma => ""
 sarah => ""
 jd => ""
-england => Eng
-ireland => Ire
-scotland => Scot
+british => {}
+bulgarian => {}
+newzealander => {}
+australian => {}
+england => England
+ireland => Ireland
+scotland => Scotland
 wales => Wales
-bulgaria => Bulg
-newZealand => NZ
-newYork => NY
+bulgaria => Bulgaria
+newZealand => NewZealand
+newYork => NewYork
 australia => Australia
 be_in => {}
 """
@@ -35,27 +39,40 @@ folval = nltk.Valuation.fromstring(v)
 grammar_file = 'simple-sem.fcfg'
 objectCounter = 0
 
-def place(person, location):
+def place(person, location,nationality=None):
     global objectCounter
-    o = 'o' + str(objectCounter)
-    objectCounter += 1
-    folval['o' + o] = o  # insert constant
 
-    if folval[person]:  # clean up if necessary
-        temp = folval[person]
-    folval[person] = o  # insert location information
-    if len(folval["be_in"]) == 1:  # clean up if necessary
-        if temp in folval["be_in"]:
-            folval["be_in"].remove(temp)
+    folval[location]
+
+    if folval[person] == '""':  # clean up if necessary
+        o = 'o' + str(objectCounter)
+        objectCounter += 1
+        folval['o' + o] = o  # insert constant
+        folval[person] = o  # insert location information
+    else:
+        o = folval[person]
+        for i in folval["be_in"]:
+            if o in i:
+                folval["be_in"].remove(i)
+                break
+    
+    if len(folval["be_in"]) >= 1:  # clean up if necessary
+        if ('',) in folval["be_in"]:
+            folval["be_in"].clear()
+
     folval["be_in"].add((o, folval[location]))  # insert location
+    if nationality != None:
+        if len(folval[nationality]) == 1:  # clean up if necessary
+            if ('',) in folval[nationality]:
+                folval[nationality].clear()
+        folval[nationality].add((o,))
 
 with open('placement.csv', newline='') as csvfile:
-    reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+    reader = csv.reader(csvfile, delimiter=' ', quotechar='"')
     next(reader, None)
     for row in reader:
-        person, location = row[0].split(",")
-        place(person, location)
-
+        person, location, nationality = row[0].split(",")
+        place(person, location,nationality)
 
 wiki = wikipediaapi.Wikipedia('en')
 wikipediaapi.log.setLevel(level=wikipediaapi.logging.ERROR)
@@ -82,6 +99,21 @@ corpusFlights = 8 + 1
 corpusWeather = 7 + corpusFlights
 corpusWikipedia = 1 + corpusWeather
 
+def updateCSV(person, location):
+    with open('placement.csv', newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=' ', quotechar='"')
+        lines = list(reader)
+        newLines = []
+        for i in lines:
+            i = i[0].split(",")
+            if i[0] == person:
+                i[1] = location
+            i = [",".join(i)]
+            newLines.append(i)
+
+    with open('placement.csv', mode='w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', quotechar='"')
+        writer.writerows(newLines)
 def predict(filename): 
     class_labels = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
     
@@ -156,9 +188,9 @@ def personToLocation(person):
                 if i[1] in sat and i[0].isalpha():
                     return (i[0])
         else:
-            return None
+            return person
     except:
-        return None 
+        return person 
                 
 kern = aiml.Kernel()
 kern.setTextEncoding(None)
@@ -181,13 +213,20 @@ while True:
     if answer[0] == "#":
         api = answer[1]
         answer = answer[2:]
-        temp = answer.split("$")
-        for i in range(len(temp)):
-            location = personToLocation(temp[i])
-            if location != None:
-                temp[i] = location
-        print(temp)
-        answer = "$".join(temp)
+        answer = answer.split("$")
+        temp = answer.copy()
+        answer[0] = personToLocation(answer[0])
+        if len(answer) > 1:
+            answer[1] = personToLocation(answer[1])
+            if answer[0] != temp[0]:
+                try:
+                    place(temp[0],answer[1])
+                    updateCSV(temp[0],answer[1])
+                except:
+                    print("location currently unsupported")
+                
+
+        answer = "$".join(answer)
 
         if api == "0":
             location, position = answer.split("$")
@@ -292,17 +331,48 @@ while True:
                         print(wpage.summary)
 
         elif api == "5":  # Who is in  ...
-            g = nltk.Assignment(folval.domain)
-            m = nltk.Model(folval.domain, folval)
-            e = nltk.Expression.fromstring("be_in(x," + answer + ")")
-            sat = m.satisfiers(e, "x", g)
-            if len(sat) == 0:
-                print("None.")
-            else:
-                sol = folval.items()
-                for i in sol:
-                    if i[1] in sat and i[0].isalpha():
-                        print(i[0])
+            try:
+                g = nltk.Assignment(folval.domain)
+                m = nltk.Model(folval.domain, folval)
+                e = nltk.Expression.fromstring("be_in(x," + answer + ")")
+                sat = m.satisfiers(e, "x", g)
+                if len(sat) == 0:
+                    print("None.")
+                else:
+                    sol = folval.items()
+                    for i in sol:
+                        if i[1] in sat and i[0].isalpha():
+                            print(i[0])
+            except:
+                print("Error please try again")
+
+        elif api == "6": #Are there any x in y
+            try:
+                params = answer.split("$")
+                g = nltk.Assignment(folval.domain)
+                m = nltk.Model(folval.domain, folval)
+                sent = 'some ' + params[1] + ' are_in ' + params[2].title()
+                results = nltk.evaluate_sents([sent], grammar_file, m, g)[0][0]
+                if results[2] == True:
+                    print("Yes.")
+                else:
+                    print("No.")
+            except:
+                print("Error please try again")
+
+        elif api == "7": # Are all x in y
+            try:
+                params = answer.split("$")
+                g = nltk.Assignment(folval.domain)
+                m = nltk.Model(folval.domain, folval)
+                sent = 'all ' + params[1] + ' are_in ' + params[2].title()
+                results = nltk.evaluate_sents([sent], grammar_file, m, g)[0][0]
+                if results[2] == True:
+                    print("Yes.")
+                else:
+                    print("No.")
+            except:
+                print("Error please try again")
 
         elif api == "9":
             correctedAnswer = getSimilar(answer)
