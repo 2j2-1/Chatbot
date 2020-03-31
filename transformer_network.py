@@ -1,3 +1,6 @@
+##https://colab.research.google.com/github/tensorflow/examples/blob/master/community/en/transformer_chatbot.ipynb
+##This notebook was used to train the transformer network and code was taken to make it work with the chatbot
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 

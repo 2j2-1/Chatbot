@@ -9,10 +9,13 @@ import keras
 from keras.models import load_model
 from keras.preprocessing import image
 import numpy as np
+import transformer_network
 # import tensorflow.python.util.deprecation as deprecation
 # deprecation._PRINT_DEPRECATION_WARNINGS = False
 import csv
 import nltk
+import reinforcement_learning
+import matplotlib.pyplot as plt
 v = """
 jordan => ""
 irena => ""
@@ -39,7 +42,8 @@ folval = nltk.Valuation.fromstring(v)
 grammar_file = 'simple-sem.fcfg'
 objectCounter = 0
 
-def place(person, location,nationality=None):
+
+def place(person, location, nationality=None):
     global objectCounter
 
     folval[location]
@@ -55,7 +59,7 @@ def place(person, location,nationality=None):
             if o in i:
                 folval["be_in"].remove(i)
                 break
-    
+
     if len(folval["be_in"]) >= 1:  # clean up if necessary
         if ('',) in folval["be_in"]:
             folval["be_in"].clear()
@@ -72,32 +76,33 @@ with open('placement.csv', newline='') as csvfile:
     next(reader, None)
     for row in reader:
         person, location, nationality = row[0].split(",")
-        place(person, location,nationality)
+        place(person, location, nationality)
 
 wiki = wikipediaapi.Wikipedia('en')
 wikipediaapi.log.setLevel(level=wikipediaapi.logging.ERROR)
 weatherAPIKey = "757318177bef8e5078e2543b02adf759"
 corpus = ["",
-        'How much are flights',
-        'How much will flights be',
-        'How much will it cost to fly',
-        'What is the cost of flying',
-        'How much will it cost',
-        'How much will the flight cost',
-        'What will the flights cost',
-        'What will the cost of flying be',
-        'Whats the weather like',
-        'What is the weather like',
-        'Hows the weather today',
-        'Hows the weather',
-        'How hot is it',
-        'How warm is it',
-        'How cold is it',
-        'Whats it like there'
-        'What is it like']
+          'How much are flights',
+          'How much will flights be',
+          'How much will it cost to fly',
+          'What is the cost of flying',
+          'How much will it cost',
+          'How much will the flight cost',
+          'What will the flights cost',
+          'What will the cost of flying be',
+          'Whats the weather like',
+          'What is the weather like',
+          'Hows the weather today',
+          'Hows the weather',
+          'How hot is it',
+          'How warm is it',
+          'How cold is it',
+          'Whats it like there'
+          'What is it like']
 corpusFlights = 8 + 1
 corpusWeather = 7 + corpusFlights
 corpusWikipedia = 1 + corpusWeather
+
 
 def updateCSV(person, location):
     with open('placement.csv', newline='') as csvfile:
@@ -114,67 +119,110 @@ def updateCSV(person, location):
     with open('placement.csv', mode='w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"')
         writer.writerows(newLines)
-def predict(filename): 
-    class_labels = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
-    
+
+
+def predict(filename):
+    class_labels = ['airplane', 'automobile', 'bird', 'cat',
+                    'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+
     model = load_model('trained_model.h5')
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
     try:
-        img = image.load_img(filename,target_size=(32,32))
+        img = image.load_img(filename, target_size=(32, 32))
     except:
         return None
-    img = image.img_to_array(img) 
+    img = image.img_to_array(img)
     img = np.expand_dims(img, axis=0)
 
     index = model.predict_classes(img)
     return class_labels[index[0]]
+
 
 def getSimilar(sentence):
     vectorizer = TfidfVectorizer()
     corpus[0] = sentence
     tfidfVector = vectorizer.fit_transform(corpus)
     cosineSimVect = cosine_similarity(tfidfVector[0:1], tfidfVector[1:])
-    if np.max(cosineSimVect)>0.3:
-        return np.argmax(cosineSimVect)+1
-    print("Unable to find match, Did you mean {}".format(corpus[np.argmax(cosineSimVect)+1]))
+    if np.max(cosineSimVect) > 0.3:
+        return np.argmax(cosineSimVect) + 1
+    print(transformer_network.predict(sentence))
     return None
 
-def flights(origin,destination,date = "2020-03-01", returnDate = None):
+
+def flights(origin, destination, date="2020-03-01", returnDate=None, predict=True):
     try:
         url = "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/autosuggest/v1.0/UK/GBP/en-GB/"
         headers = {
-                'x-rapidapi-host': "skyscanner-skyscanner-flight-search-v1.p.rapidapi.com",
-                'x-rapidapi-key': "7433b6e2c0msh561f7fc11f96c81p1e2a23jsn8bcf4600823a"}
-        querystring = {"query":origin}
-        response = requests.request("GET", url, headers=headers, params=querystring)
+            'x-rapidapi-host': "skyscanner-skyscanner-flight-search-v1.p.rapidapi.com",
+            'x-rapidapi-key': "7433b6e2c0msh561f7fc11f96c81p1e2a23jsn8bcf4600823a"}
+        querystring = {"query": origin}
+        response = requests.request(
+            "GET", url, headers=headers, params=querystring)
         origin = json.loads(response.text)["Places"][0]["PlaceId"]
-        querystring = {"query":destination}
-        response = requests.request("GET", url, headers=headers, params=querystring)
+        querystring = {"query": destination}
+        response = requests.request(
+            "GET", url, headers=headers, params=querystring)
         destination = json.loads(response.text)["Places"][0]["PlaceId"]
 
-        print("From: {}\nTo: {}\nOn:{}".format(origin,destination,date))
+        print("From: {}\nTo: {}\nOn:{}".format(origin, destination, date))
         if returnDate:
-            url = "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsequotes/v1.0/UK/GBP/en-UK/{}/{}/{}/{}".format(origin,destination,date,returnDate)
+            url = "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsequotes/v1.0/UK/GBP/en-UK/{}/{}/{}/{}".format(
+                origin, destination, date, returnDate)
         else:
-            url = "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsequotes/v1.0/UK/GBP/en-UK/{}/{}/{}".format(origin,destination,date)
-        response = json.loads(requests.request("GET", url, headers=headers).text)
-        print("Prices: £{}".format(
-            response["Quotes"][0]["MinPrice"]
-            ))
+            url = "https://skyscanner-skyscanner-flight-search-v1.p.rapidapi.com/apiservices/browsequotes/v1.0/UK/GBP/en-UK/{}/{}/{}".format(
+                origin, destination, date)
+        response = json.loads(requests.request(
+            "GET", url, headers=headers).text)
+
+        price = response["Quotes"][0]["MinPrice"]
+        print("Prices: £{}".format(price))
+        return price
+
     except:
-        print("Unable to get results")
+        ## Reinforcement learning section
+        
+        if predict:
+            print("Predicting price, please wait this may take some time.")
+            points = []
+            prices = [0, 355, 290, 293, 355, 283, 406, 298, 406, 406, 262, 232, 391, 203, 260, 341, 384,
+                      232, 335, 233, 249, 257, 231, 195, 263, 245, 409, 249, 255, 234, 201, 266, 269, 226, 192]
+            prices = list(enumerate(prices))[1:]
+            length = 30
+            predict_days = 10
+            for i in range(length):
+                try:
+                    '''
+                    skyscanner api is currently down because of covid-19 the line below would work once the api is back on line
+                    for now ive got the prices online and manually put them into list prices.
+                    '''
+                    # points.append([i,flights(origin,destination,date,returnDate,False)])
+                    points.append(prices[i])
+                except:
+                    pass
+            print(points)
+            hof, func = reinforcement_learning.main(points)
+            print("Function to estimate prices:", hof)
+            plt.plot(range(1, length), [func(i) for i in range(1, length)])
+            plt.plot(range(1, length + predict_days),
+                     [func(i) for i in range(1, length + predict_days)])
+            plt.ylabel("Amount")
+            plt.xlabel("Days Till journey")
+            plt.show()
+
 
 def getWeather(location):
     api_url = "http://api.openweathermap.org/data/2.5/weather?q="
-    response = requests.get(api_url + location + "&units=metric&APPID=" + weatherAPIKey)
+    response = requests.get(api_url + location +
+                            "&units=metric&APPID=" + weatherAPIKey)
     try:
         response_json = json.loads(response.content)
         temperature = response_json['main']['temp']
         return temperature
     except:
         return None
+
 
 def personToLocation(person):
     try:
@@ -190,8 +238,8 @@ def personToLocation(person):
         else:
             return person
     except:
-        return person 
-                
+        return person
+
 kern = aiml.Kernel()
 kern.setTextEncoding(None)
 kern.bootstrap(learnFiles="mybot.xml")
@@ -220,11 +268,10 @@ while True:
             answer[1] = personToLocation(answer[1])
             if answer[0] != temp[0]:
                 try:
-                    place(temp[0],answer[1])
-                    updateCSV(temp[0],answer[1])
+                    place(temp[0], answer[1])
+                    updateCSV(temp[0], answer[1])
                 except:
                     print("location currently unsupported")
-                
 
         answer = "$".join(answer)
 
@@ -240,7 +287,7 @@ while True:
                 try:
                     masterOutbound = location[:10]
                     temp = masterOutbound.split("-")
-                    if len(temp[0].strip()) == 4 and len(temp[1].strip()) == 2 and len(temp[2].strip()) == 2: 
+                    if len(temp[0].strip()) == 4 and len(temp[1].strip()) == 2 and len(temp[2].strip()) == 2:
                         print("{} set as outbound".format(masterOutbound))
                     else:
                         print("Use date format YYYY-MM-DD")
@@ -250,7 +297,7 @@ while True:
                 try:
                     masterInbound = location[:10]
                     temp = masterInbound.split("-")
-                    if len(temp[0].strip()) == 4 and len(temp[1].strip()) == 2 and len(temp[2].strip()) == 2: 
+                    if len(temp[0].strip()) == 4 and len(temp[1].strip()) == 2 and len(temp[2].strip()) == 2:
                         print("{} set as inbound".format(masterInbound))
                     else:
                         print("Use date format YYYY-MM-DD")
@@ -262,15 +309,16 @@ while True:
         elif api == "1":
             if len(answer.split("$")) == 2:
                 masterOrgin, masterDestination = answer.split("$")
-                flights(masterOrgin,masterDestination)
+                flights(masterOrgin, masterDestination)
             if len(answer.split("$")) == 3:
-                masterOrgin, masterDestination,masterOutbound = answer.split("$")
-                flights(masterOrgin,masterDestination,masterOutbound)
+                masterOrgin, masterDestination, masterOutbound = answer.split(
+                    "$")
+                flights(masterOrgin, masterDestination, masterOutbound)
 
         elif api == "2":
             weather = getWeather(answer)
             if weather:
-                 print("The tempreture in {} is {}".format(answer,weather))
+                print("The tempreture in {} is {}".format(answer, weather))
         elif api == "3":
             wpage = wiki.page(answer)
             if wpage.exists():
@@ -279,49 +327,56 @@ while True:
                 print("Sorry, I don't know what that is.")
 
         elif api == "4":
-            answer = answer.replace("  #9$",".")
+            answer = answer.replace("  #9$", ".")
             if "jpg" not in answer and not "png" in answer:
                 print("Invalid File type")
             else:
                 prediction = predict(answer)
                 if prediction == "automobile":
-                    print("This is a Automobile, why not travel to Germany to drive on the world famous Autobahn")
+                    print(
+                        "This is a Automobile, why not travel to Germany to drive on the world famous Autobahn")
                     if masterOrgin:
-                        flights(masterOrgin,"germany")
+                        flights(masterOrgin, "germany")
 
                 if prediction == "airplane":
-                    print("This is a Airplane, why not ask me about flight infomation to book your next holiday")
-                    
+                    print(
+                        "This is a Airplane, why not ask me about flight infomation to book your next holiday")
 
                 if prediction == "bird":
-                    print("This is a Bird, why not travel The Jurong Bird Park in Singapore to visit the worlds largest bird sancturay")
+                    print(
+                        "This is a Bird, why not travel The Jurong Bird Park in Singapore to visit the worlds largest bird sancturay")
                     if masterOrgin:
-                        flights(masterOrgin,"singapore")
+                        flights(masterOrgin, "singapore")
 
                 if prediction == "cat":
-                    print("This is a Cat, why not travel to Tashirojima to see the cat island")
+                    print(
+                        "This is a Cat, why not travel to Tashirojima to see the cat island")
                     if masterOrgin:
-                        flights(masterOrgin,"japan")
+                        flights(masterOrgin, "japan")
 
                 if prediction == "deer":
-                    print("This is a Deer, why not travel to canada to see herds of deer freely roaming")
+                    print(
+                        "This is a Deer, why not travel to canada to see herds of deer freely roaming")
                     if masterOrgin:
-                        flights(masterOrgin,"canada")
+                        flights(masterOrgin, "canada")
 
                 if prediction == "dog":
-                    print("This is a Dog, why not visit dog island, just off the coast of florida")
+                    print(
+                        "This is a Dog, why not visit dog island, just off the coast of florida")
                     if masterOrgin:
-                        flights(masterOrgin,"florida")
+                        flights(masterOrgin, "florida")
 
                 if prediction == "frog":
-                    print("This is a Frog, why not travel the amazon rain forest home to thousand of species of frogs")
+                    print(
+                        "This is a Frog, why not travel the amazon rain forest home to thousand of species of frogs")
                     if masterOrgin:
-                        flights(masterOrgin,"Rio de Janeiro")
+                        flights(masterOrgin, "Rio de Janeiro")
 
                 if prediction == "horse":
-                    print("This is a horse, why not travel to Iceland to see the wild Icelandic horses")
+                    print(
+                        "This is a horse, why not travel to Iceland to see the wild Icelandic horses")
                     if masterOrgin:
-                        flights(masterOrgin,"iceland")
+                        flights(masterOrgin, "iceland")
 
                 elif prediction == None:
                     print("Could not find file {}".format(answer))
@@ -346,7 +401,7 @@ while True:
             except:
                 print("Error please try again")
 
-        elif api == "6": #Are there any x in y
+        elif api == "6":  # Are there any x in y
             try:
                 params = answer.split("$")
                 g = nltk.Assignment(folval.domain)
@@ -360,7 +415,7 @@ while True:
             except:
                 print("Error please try again")
 
-        elif api == "7": # Are all x in y
+        elif api == "7":  # Are all x in y
             try:
                 params = answer.split("$")
                 g = nltk.Assignment(folval.domain)
@@ -379,7 +434,8 @@ while True:
             if correctedAnswer:
                 if correctedAnswer < corpusFlights:
                     if masterOrgin and masterDestination:
-                        flights(masterOrgin,masterDestination,masterOutbound,masterInbound)
+                        flights(masterOrgin, masterDestination,
+                                masterOutbound, masterInbound)
                     elif masterOrgin:
                         print("Please set an destination")
                     elif masterDestination:
@@ -396,9 +452,11 @@ while True:
                     else:
                         weatherDestination = None
                     if weatherOrigin:
-                        print("The tempreture in {} is {}".format(masterOrgin,weatherOrigin))
+                        print("The tempreture in {} is {}".format(
+                            masterOrgin, weatherOrigin))
                     if weatherDestination:
-                        print("The tempreture at {} is {}".format(masterDestination,weatherDestination))
+                        print("The tempreture at {} is {}".format(
+                            masterDestination, weatherDestination))
                     if not (weatherOrigin or weatherDestination):
                         print("Could not get weather infomation")
                 elif correctedAnswer < corpusWikipedia:
@@ -408,7 +466,8 @@ while True:
                             print(wpage.summary)
                             print("Learn more at", wpage.canonicalurl)
                         else:
-                            print("Sorry, I don't know what {} is.".format(masterDestination))
+                            print("Sorry, I don't know what {} is.".format(
+                                masterDestination))
                     else:
                         print("Please set an destination")
     else:

@@ -1,0 +1,13 @@
+##Reinforcement learning
+> from london to new york
+From: LOND-sky
+To: NYCA-sky
+On:2020-03-01
+Predicting price, please wait this may take some time.
+see Figure_1.png
+
+#Transformer network
+> My name is jordan
+you re welcome .
+> And your name is?
+i m sorry i read about my book .
